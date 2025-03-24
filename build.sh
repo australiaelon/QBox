@@ -14,3 +14,18 @@ go build -v \
     -ldflags="$LDFLAGS" \
     -o qbox \
     ./cmd/qbox
+
+TARGET="macos"
+ARCH="arm64"
+OUTPUT="build"
+TAGS="with_gvisor,with_quic,with_wireguard,with_ech,with_utls,with_clash_api"
+LDFLAGS="-s -w -buildid="
+
+CGO_ENABLED=1 GOOS=darwin GOARCH=$ARCH go build -v \
+    -buildmode=c-shared \
+    -trimpath \
+    -buildvcs=false \
+    -ldflags="$LDFLAGS" \
+    -tags="$TAGS" \
+    -o "$OUTPUT/$TARGET/$ARCH/libqbox.dylib" \
+    ./export/ffi.go
