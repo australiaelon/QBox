@@ -1,0 +1,137 @@
+package libqbox
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"sync"
+
+	"github.com/sagernet/sing-box"
+	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/option"
+)
+
+type Instance struct {
+	box    *box.Box
+	config string
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+var (
+	instances     = make(map[uint64]*Instance)
+	instancesLock sync.Mutex
+	nextID        uint64 = 1
+)
+
+
+func GetVersionInfo() map[string]interface{} {
+	return map[string]interface{}{
+		"version":  C.Version,
+	}
+}
+
+
+func StartWithBase64Config(configBase64 string) (uint64, error) {
+	
+	jsonConfig, err := base64.StdEncoding.DecodeString(configBase64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode base64 config: %w", err)
+	}
+
+	
+	return StartWithJSONConfig(string(jsonConfig))
+}
+
+
+func StartWithJSONConfig(jsonConfig string) (uint64, error) {
+	
+	var options option.Options
+	err := json.Unmarshal([]byte(jsonConfig), &options)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse JSON config: %w", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	
+	instance, err := box.New(box.Options{
+		Context: ctx,
+		Options: options,
+	})
+	if err != nil {
+		cancel()
+		return 0, fmt.Errorf("failed to create instance: %w", err)
+	}
+
+	
+	err = instance.Start()
+	if err != nil {
+		cancel()
+		instance.Close()
+		return 0, fmt.Errorf("failed to start instance: %w", err)
+	}
+
+	
+	rbInstance := &Instance{
+		box:    instance,
+		config: jsonConfig,
+		ctx:    ctx,
+		cancel: cancel,
+	}
+
+	
+	instancesLock.Lock()
+	id := nextID
+	nextID++
+	instances[id] = rbInstance
+	instancesLock.Unlock()
+
+	return id, nil
+}
+
+
+func Stop(instanceID uint64) error {
+	instancesLock.Lock()
+	instance, exists := instances[instanceID]
+	if exists {
+		delete(instances, instanceID)
+	}
+	instancesLock.Unlock()
+
+	if !exists {
+		return fmt.Errorf("instance not found")
+	}
+
+	
+	instance.cancel()
+
+	
+	err := instance.box.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close instance: %w", err)
+	}
+
+	return nil
+}
+
+
+func GetInstance(instanceID uint64) (*Instance, bool) {
+	instancesLock.Lock()
+	defer instancesLock.Unlock()
+	
+	instance, exists := instances[instanceID]
+	return instance, exists
+}
+
+
+func GetVersionBase64() (string, error) {
+	versionInfo := GetVersionInfo()
+	versionJSON, err := json.Marshal(versionInfo)
+	if err != nil {
+		return "", err
+	}
+	
+	return base64.StdEncoding.EncodeToString(versionJSON), nil
+}
