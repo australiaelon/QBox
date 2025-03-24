@@ -1,4 +1,4 @@
-package libqbox
+package qbox
 
 import (
 	"context"
