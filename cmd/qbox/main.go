@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-    "github.com/australiaelon/QBox/libqbox"
+	"github.com/australiaelon/QBox/libqbox"
 )
 
 var (
@@ -44,54 +44,29 @@ func main() {
 
 	osSignals := make(chan os.Signal, 1)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer signal.Stop(osSignals)
 
-	<-osSignals
+	for {
+		sig := <-osSignals
 
-	fmt.Println("Shutting down...")
+		if sig == syscall.SIGHUP {
 
-	err = libqbox.Stop(instanceID)
-	if err != nil {
-		fmt.Printf("Error stopping instance: %v\n", err)
-		os.Exit(1)
+			fmt.Println("Configuration reload via SIGHUP not supported when started with -c flag")
+		} else {
+
+			fmt.Println("Shutting down...")
+			err = libqbox.Stop(instanceID)
+			if err != nil {
+				fmt.Printf("Error stopping instance: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("Gracefully stopped")
+			break
+		}
 	}
-
-	fmt.Println("Gracefully stopped")
 }
 
 func printVersion() {
 	versionInfo := libqbox.GetVersionInfo()
-
-	fmt.Printf("qbox version: %s\n\n", versionInfo["version"])
-
-	fmt.Println("Features:")
-	featuresMap := versionInfo["features"].(map[string]bool)
-
-	features := []struct {
-		name  string
-		value bool
-	}{
-		{"IPv6 support", featuresMap["ipv6"]},
-		{"gVisor support", featuresMap["gvisor"]},
-		{"QUIC support", featuresMap["quic"]},
-		{"Wireguard support", featuresMap["wireguard"]},
-		{"ECH support", featuresMap["ech"]},
-		{"UTLS support", featuresMap["utls"]},
-		{"Clash API support", featuresMap["clash_api"]},
-		{"V2Ray API support", featuresMap["v2ray_api"]},
-		{"ShadowsocksR support", featuresMap["ssr"]},
-		{"DHCP support", featuresMap["dhcp"]},
-		{"Low Memory support", featuresMap["low_memory"]},
-		{"Connection tracking support", featuresMap["conntrack"]},
-		{"System service support", featuresMap["system_service"]},
-	}
-
-	for _, feature := range features {
-		fmt.Printf("  %s: %t\n", feature.name, feature.value)
-	}
-
-	if featuresMap["cgo_enabled"] {
-		fmt.Println("CGO: enabled")
-	} else {
-		fmt.Println("CGO: disabled")
-	}
+	fmt.Printf("qbox version: %s\n", versionInfo["version"])
 }
