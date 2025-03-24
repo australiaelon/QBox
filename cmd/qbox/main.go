@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/australiaelon/qbox/libqbox"
+	"github.com/australiaelon/QBox/libqbox"
 )
 
 var (
