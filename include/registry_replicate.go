@@ -9,6 +9,7 @@ import (
 	"github.com/sagernet/sing-box/protocol/direct"
 	protocolDNS "github.com/sagernet/sing-box/protocol/dns"
 	"github.com/sagernet/sing-box/protocol/group"
+	"github.com/sagernet/sing-box/protocol/http"
 	"github.com/sagernet/sing-box/protocol/mixed"
 	"github.com/sagernet/sing-box/protocol/redirect"
 	"github.com/sagernet/sing-box/protocol/socks"
@@ -24,14 +25,15 @@ func InboundRegistry() *inbound.Registry {
 	direct.RegisterInbound(registry)
 
 	socks.RegisterInbound(registry)
+	http.RegisterInbound(registry)
 	mixed.RegisterInbound(registry)
 
-	tun.RegisterInbound(registry)
-	redirect.RegisterRedirect(registry)
-	redirect.RegisterTProxy(registry)
-	direct.RegisterInbound(registry)
-	socks.RegisterInbound(registry)
-	mixed.RegisterInbound(registry)
+	// shadowsocks.RegisterInbound(registry)
+	// vmess.RegisterInbound(registry)
+	// trojan.RegisterInbound(registry)
+	// naive.RegisterInbound(registry)
+	// shadowtls.RegisterInbound(registry)
+	// vless.RegisterInbound(registry)
 
 	registerQUICInbounds(registry)
 	registerStubForRemovedInbounds(registry)
@@ -43,19 +45,26 @@ func OutboundRegistry() *outbound.Registry {
 	registry := outbound.NewRegistry()
 
 	direct.RegisterOutbound(registry)
+
 	block.RegisterOutbound(registry)
-	protocolDNS.RegisterOutbound(registry)
+	dns.RegisterOutbound(registry)
 
 	group.RegisterSelector(registry)
 	group.RegisterURLTest(registry)
+
+	// socks.RegisterOutbound(registry)
+	// http.RegisterOutbound(registry)
+	// shadowsocks.RegisterOutbound(registry)
+	// vmess.RegisterOutbound(registry)
+	// trojan.RegisterOutbound(registry)
+	// tor.RegisterOutbound(registry)
+	// ssh.RegisterOutbound(registry)
+	// shadowtls.RegisterOutbound(registry)
+	// vless.RegisterOutbound(registry)
 
 	registerQUICOutbounds(registry)
 	registerWireGuardOutbound(registry)
 	registerStubForRemovedOutbounds(registry)
 
 	return registry
-}
-
-func init() {
-    fmt.Println("LOADING QBOX PROTOCOLS VERSION")
 }
